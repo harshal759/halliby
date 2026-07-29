@@ -582,9 +582,13 @@ function addLumaCartIcon(container, langCode) {
     return;
   }
 
-  const suffix = isAuthorEnvironment() ? '.html' : '';
+  const isAuthor = isAuthorEnvironment();
+  const suffix = isAuthor ? '.html' : '';
+  const cartHref = isAuthor
+    ? `/content/${siteName}${PATH_PREFIX}/${langCode}/cart.html`
+    : `/${langCode}/cart`;
   const cartLink = document.createElement('a');
-  cartLink.href = `/${langCode}/cart${suffix}`;
+  cartLink.href = cartHref;
   cartLink.className = 'cart-icon';
   cartLink.setAttribute('aria-label', 'Shopping Cart');
   cartLink.setAttribute('title', 'Shopping Cart');
@@ -710,8 +714,9 @@ export default async function decorate(block) {
       createUserProfile(targetContainer, langCode, true);
     } else if (!targetContainer.querySelector('.sign-in-btn')) {
       const signInLink = document.createElement('a');
-      const signInSuffix = isAuthorEnvironment() ? '.html' : '';
-      signInLink.href = `/${langCode}/sign-in${signInSuffix}`;
+      signInLink.href = isAuthor
+        ? `/content/${siteName}${PATH_PREFIX}/${langCode}/sign-in.html`
+        : `/${langCode}/sign-in`;
       signInLink.className = 'sign-in-btn';
       signInLink.textContent = 'Sign in';
       signInLink.title = 'Sign-In';
