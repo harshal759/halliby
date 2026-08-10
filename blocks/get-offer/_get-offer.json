@@ -36,6 +36,13 @@
         },
         {
           "component": "text",
+          "name": "toast-message",
+          "label": "Success Toast Message",
+          "value": "",
+          "valueType": "string"
+        },
+        {
+          "component": "text",
           "name": "custom-class",
           "label": "Custom class",
           "value": "",
