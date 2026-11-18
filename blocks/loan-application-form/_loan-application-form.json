@@ -22,11 +22,23 @@
       "id": "loan-application-form",
       "fields": [
         {
+          "component": "tab",
+          "label": "Basic",
+          "name": "basic"
+        },
+        {
           "component": "text",
-          "name": "form-title",
-          "label": "Form Title",
+          "name": "wizard-title",
+          "label": "Wizard Title",
           "valueType": "string",
-          "description": "Heading displayed at the top of the form"
+          "description": "Passed in the data layer as the wizard title. It is not displayed on the page."
+        },
+        {
+          "component": "text",
+          "name": "wizard-name",
+          "label": "Wizard name",
+          "valueType": "string",
+          "description": "Name of the form passed in the data layer"
         },
         {
           "component": "aem-content",
@@ -87,6 +99,25 @@
           "label": "Custom class",
           "valueType": "string",
           "description": "Space-separated class names to add to the block"
+        },
+        {
+          "component": "tab",
+          "label": "Mobile Specific",
+          "name": "mobileSpecific"
+        },
+        {
+          "component": "text",
+          "name": "mobilebuttoneventtype",
+          "label": "Mobile Form Submission Event",
+          "valueType": "string"
+        },
+        {
+          "component": "text",
+          "name": "custommobilestyle",
+          "label": "Custom Mobile Style",
+          "valueType": "string[]",
+          "multi": true,
+          "description": "One style per row, as key:value (e.g. checkbox-width:250 sets the width of the checkbox rows)"
         }
       ]
     }

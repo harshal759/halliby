@@ -16,8 +16,6 @@ import {
   loadScript,
   toClassName,
   toCamelCase,
-  decorateDefaultBlock,
-  hideSidekick
 } from './aem.js';
 import { picture, source, img } from './dom-helpers.js';
 
@@ -85,18 +83,27 @@ export function isAuthorEnvironment() {
 export function normalizeAemPath(path) {
   if (!path) return path;
   let pathname = path;
+  let suffix = '';
   if (/^https?:\/\//i.test(path)) {
     try {
-      pathname = new URL(path).pathname;
+      const parsed = new URL(path);
+      pathname = parsed.pathname;
+      suffix = `${parsed.search}${parsed.hash}`;
     } catch {
       return path;
     }
+  } else {
+    // keep query string/hash out of the .html add/strip logic below
+    const match = path.match(/^([^?#]*)([?#].*)?$/);
+    [, pathname, suffix = ''] = match;
   }
-  if (!pathname.startsWith('/content/')) return pathname;
+  if (!pathname.startsWith('/content/')) return `${pathname}${suffix}`;
   if (isAuthorEnvironment()) {
-    return pathname.endsWith('.html') ? pathname : `${pathname}.html`;
+    const withHtml = pathname.endsWith('.html') ? pathname : `${pathname}.html`;
+    return `${withHtml}${suffix}`;
   }
-  return pathname.replace(/^\/content\/[^/]+\/language-masters/, '').replace(/\.html$/, '');
+  const stripped = pathname.replace(new RegExp(`^/content/.+?${PATH_PREFIX}`), '').replace(/\.html$/, '');
+  return `${stripped}${suffix}`;
 }
 
 export function normalizeCategoryValue(value) {

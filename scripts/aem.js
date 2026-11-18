@@ -152,55 +152,6 @@ function setup() {
   }
 }
 /**
- * Protects the AEM Sidekick from being opened by default
- */
-function hideSidekick() {
-  // Check if URL contains required ZDP parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const hasZdpId = urlParams.has('zdp-id');
-  const hasZdpEnv = urlParams.has('zdp-env');
-  const hasZdpToken = urlParams.has('zdp-token');
-  
-  // Only proceed if all required ZDP parameters are present
-  if (!hasZdpId || !hasZdpEnv || !hasZdpToken) {
-    console.log('ZDP parameters not found, skipping sidekick hiding');
-    return;
-  }
-  
-  const sidekick = document.querySelector('aem-sidekick');
-  
-  if (sidekick) {
-    // Sidekick found, hide it if open
-    if (sidekick.hasAttribute('open')) {
-      console.log('hiding sidekick');
-      sidekick.setAttribute('open', false);
-    }
-  } else {
-    // Sidekick not found yet, watch for it to be added
-    console.log('sidekick not found, watching for it...');
-    
-    const observer = new MutationObserver((mutations, obs) => {
-      const sidekickElement = document.querySelector('aem-sidekick');
-      if (sidekickElement) {
-        console.log('sidekick found by observer, hiding...');
-        if (sidekickElement.hasAttribute('open')) {
-          sidekickElement.setAttribute('open', false);
-        }
-        obs.disconnect(); // Stop observing once found
-      }
-    });
-    
-    // Watch body for added child nodes
-    observer.observe(document.body, {
-      childList: true,
-      subtree: false
-    });
-    
-    // Stop observing after 10 seconds as a safety measure
-    setTimeout(() => observer.disconnect(), 10000);
-  }
-}
-/**
  * Auto initialization.
  */
 
@@ -242,6 +193,23 @@ function toCamelCase(name) {
  * @returns {object} The block config
  */
 // eslint-disable-next-line import/prefer-default-export
+// authors may put the real destination as an absolute URL in the link text (e.g. when EDS
+// strips protocol+host off links to other EDS-hosted sites) — trust it over href when present
+export function resolveAnchorValue(anchor) {
+  const hrefAttr = (anchor.getAttribute('href') || '').trim();
+  const text = (anchor.textContent || '').trim();
+  if (/^https?:\/\//i.test(text) && !/^https?:\/\//i.test(hrefAttr)) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(text);
+      return text;
+    } catch {
+      /* not a valid absolute URL, ignore */
+    }
+  }
+  return anchor.href;
+}
+
 function readBlockConfig(block) {
   const config = {};
   block.querySelectorAll(':scope > div').forEach((row) => {
@@ -254,9 +222,9 @@ function readBlockConfig(block) {
         if (col.querySelector('a')) {
           const as = [...col.querySelectorAll('a')];
           if (as.length === 1) {
-            value = as[0].href;
+            value = resolveAnchorValue(as[0]);
           } else {
-            value = as.map((a) => a.href);
+            value = as.map(resolveAnchorValue);
           }
         } else if (col.querySelector('img')) {
           const imgs = [...col.querySelectorAll('img')];
@@ -597,8 +565,29 @@ function wrapTextNodes(block) {
  * @param {Element} element container element
  */
 function decorateButtons(element) {
+  const isAuthor = window?.location?.origin?.includes('author');
   element.querySelectorAll('a').forEach((a) => {
     a.title = a.title || a.textContent;
+    if (isAuthor) {
+      const href = a.getAttribute('href') || '';
+      let skip = false;
+      if (/^https?:\/\//i.test(href)) {
+        try {
+          const parsedHref = new URL(href);
+          // external/absolute URL (different origin or not a /content/ path) — leave untouched
+          skip = parsedHref.origin !== window.location.origin || !parsedHref.pathname.startsWith('/content/');
+        } catch {
+          skip = true;
+        }
+      }
+      // author-mode requires .html, but the server can't resolve .html appended after a query string
+      if (!skip) {
+        const [pathname, suffix = ''] = href.match(/^([^?#]*)([?#].*)?$/).slice(1);
+        if (pathname && !pathname.toLowerCase().endsWith('.html')) {
+          a.setAttribute('href', `${pathname}.html${suffix}`);
+        }
+      }
+    }
     if (a.href !== a.textContent) {
       const up = a.parentElement;
       const twoup = a.parentElement.parentElement;
@@ -708,7 +697,10 @@ function decorateSections(main) {
       applySectionTextAlignment(section, meta['sec-alignment'] ?? meta['text-alignment']);
     } else {
       // Apply custom class for sections with data-sec-custom-styles set directly (no section-metadata block)
+      applySectionBackgroundImage(section, section.dataset.secBgImage);
       applySectionCustomClass(section, section.dataset.secCustomStyles);
+      applySectionTextColor(section, section.dataset.secColor);
+      applySectionTextAlignment(section, section.dataset.secAlignment);
     }
     applySectionItemWidths(section);
   });
@@ -916,6 +908,11 @@ function applySectionBackgroundImage(section, bgImagePath) {
   if (path) {
     section.dataset.secBgImage = path;
     const picture = createOptimizedPicture(path, '', false, [{ width: '2000' }]);
+    const imageUrl = new URL(path, window.location.href);
+    picture.querySelectorAll('source, img').forEach((image) => {
+      const attribute = image.tagName === 'SOURCE' ? 'srcset' : 'src';
+      image.setAttribute(attribute, new URL(image.getAttribute(attribute), imageUrl).href);
+    });
     picture.classList.add('section-bg');
     const img = picture.querySelector('img');
     if (img) img.classList.add('sec-img');
@@ -1154,73 +1151,7 @@ function decorateBlock(block) {
     if (section) section.classList.add(`${shortBlockName}-container`);
     // eslint-disable-next-line no-use-before-define
     decorateButtons(block);
-          // Set block ID with shortBlockName and index
-          const blocks = document.querySelectorAll(`.${shortBlockName}`);
-          blocks.forEach((block, index) => {
-            block.id = `${shortBlockName}-${index}`;
-            
-            // Add indexed IDs to images within the block
-            const images = block.querySelectorAll('img');
-            images.forEach((img, imgIndex) => {
-              const imgId = `${shortBlockName}_${index}_image_${imgIndex}`;
-              img.id = imgId;
-            });
-            // Skip content ID generation for blocks that handle it themselves (columns, cards, carousel)
-            const blocksWithCustomIDs = ['columns', 'cards', 'carousel'];
-            if (!blocksWithCustomIDs.includes(shortBlockName)) {
-              // Merge headings (h1-h6) and paragraphs into a single loop for efficiency
-              ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p'].forEach((tag) => {
-                const elements = block.querySelectorAll(tag);
-                elements.forEach((el, elIndex) => {
-                  el.id = `${shortBlockName}_${index}_${tag}_${elIndex}`;
-                });
-              });
-            }
-          });
-          }
-          }
-        
-/**
- * Decorates a default block.
- * @param {Element} block The block element
- */
-export function decorateDefaultBlock(main) {
-  const sections = main.querySelectorAll('.section');
-  sections.forEach((section, sectionIndex) => {
-    // Find all default-content-wrapper elements in this section
-    const defaultWrappers = section.querySelectorAll('.default-content-wrapper');
-    defaultWrappers.forEach((wrapper, wrapperIndex) => {
-      wrapper.setAttribute('data-section-content-index', `${sectionIndex}_${wrapperIndex}`);
-      
-      // Add IDs to text elements (overwrite any existing IDs)
-      ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol'].forEach((tag) => {
-        const elements = wrapper.querySelectorAll(tag);
-        let adjustedIndex = 0; // Use a separate counter for adjusted indexing
-        elements.forEach((el) => {
-          // Check if this is a <p> tag containing only an image (picture or img element)
-          if (tag === 'p') {
-            const hasOnlyImage = el.querySelector('picture, img') &&
-                                el.textContent.trim() === '';
-            
-            if (hasOnlyImage) {
-              // Skip ID assignment for <p> tags that only contain images
-              // The image itself will get its own ID separately
-              return; // Skip this element
-            }
-          }
-          
-          el.id = `section_${sectionIndex}_content_${wrapperIndex}_${tag}_${adjustedIndex}`;
-          adjustedIndex++;
-        });
-      });
-    });
-    
-    // Add IDs to images at section level (overwrite any existing IDs)
-    const images = section.querySelectorAll('.default-content-wrapper img');
-    images.forEach((img, imgIndex) => {
-      img.id = `section_${sectionIndex}_image_${imgIndex}`;
-    });
-  });
+  }
 }
 /**
  * Decorates all blocks in a container element.
@@ -1381,5 +1312,4 @@ export {
   toClassName,
   waitForFirstImage,
   wrapTextNodes,
-  hideSidekick
 };

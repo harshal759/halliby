@@ -22,6 +22,20 @@
       "id": "new-account",
       "fields": [
         {
+          "component": "text",
+          "name": "wizard-title",
+          "label": "Wizard Title",
+          "valueType": "string",
+          "description": "Passed in the data layer as the wizard title. It is not displayed on the page."
+        },
+        {
+          "component": "text",
+          "name": "wizard-name",
+          "label": "Wizard name",
+          "valueType": "string",
+          "description": "Name of the form passed in the data layer"
+        },
+        {
           "component": "aem-content",
           "valueType": "string",
           "name": "redirectUrl",
@@ -63,6 +77,13 @@
           "value": "",
           "valueType": "string",
           "description": "Space-separated class names to add to the block"
+        },
+        {
+          "component": "text",
+          "name": "mobilebuttoneventtype",
+          "label": "Mobile Button Event Type",
+          "value": "",
+          "valueType": "string"
         }
       ]
     }

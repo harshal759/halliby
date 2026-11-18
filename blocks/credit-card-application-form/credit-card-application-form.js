@@ -11,8 +11,8 @@ import { dispatchCustomEvent } from '../../scripts/custom-events.js';
 import { syncFormDataLayer, DEFAULT_FORM_FIELD_MAP, attachLiveFormSync, submitToWebhook, fetchButtonDataSheet } from '../../scripts/form-data-layer.js';
 import { normalizeAemPath } from '../../scripts/scripts.js';
 
-const CREDIT_CARD_APPLICATION_FORM_WIZARD_NAME = 'Credit Card Application';
-const CREDIT_CARD_APPLICATION_FORM_WIZARD_TITLE = 'Credit Card Application';
+let creditCardApplicationFormWizardName;
+let creditCardApplicationFormWizardTitle;
 
 function getNestedProperty(obj, path) {
   if (!obj || !path) return undefined;
@@ -81,8 +81,8 @@ function buildWizardPayload(currentStepIndex, totalSteps) {
     : 0;
   const steps = Array.from({ length: totalSteps }, (_, idx) => buildStepMeta(idx));
   return {
-    name: CREDIT_CARD_APPLICATION_FORM_WIZARD_NAME,
-    title: CREDIT_CARD_APPLICATION_FORM_WIZARD_TITLE,
+    name: creditCardApplicationFormWizardName,
+    title: creditCardApplicationFormWizardTitle,
     steps,
     currentStep: safeIndex + 1,
   };
@@ -122,8 +122,7 @@ function applyButtonConfigToSubmitButton(block, config) {
   if (buttonData && String(buttonData).trim()) submitButton.dataset.buttonData = String(buttonData).trim();
 }
 
-function buildCreditCardApplicationFormDef(config = {}) {
-  const formTitle = (config['form-title'] || '').toString().trim();
+function buildCreditCardApplicationFormDef() {
   const stateOptions = ['', 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'];
   const stateNames = ['Select...', ...stateOptions.slice(1)];
   return {
@@ -131,12 +130,6 @@ function buildCreditCardApplicationFormDef(config = {}) {
     fieldType: 'form',
     appliedCssClassNames: 'credit-card-application-form-form credit-card-application-form-wizard',
     items: [
-      {
-        id: 'heading-credit-card-application-form',
-        fieldType: 'heading',
-        label: { value: formTitle },
-        appliedCssClassNames: 'col-12 credit-card-application-form-heading',
-      },
       {
         id: 'panel-wizard',
         name: 'wizard',
@@ -279,7 +272,17 @@ function attachCreditCardApplicationFormSubmitHandler(block, redirectUrl) {
 
 export default async function decorate(block) {
   const config = readBlockConfig(block) || {};
-  [...block.children].forEach((row) => { row.style.display = 'none'; });
+
+  creditCardApplicationFormWizardTitle =
+  (config.wizardtitle ?? config['wizard-title'] ?? config.formtitle ?? config['form-title'] ?? '')
+    .toString()
+    .trim();
+
+  creditCardApplicationFormWizardName =
+    (config.wizardname ?? config['wizard-name'] ?? config.formname ?? config['form-name'] ?? '')
+      .toString()
+      .trim() || 'credit-card-application';
+    [...block.children].forEach((row) => { row.style.display = 'none'; });
 
   const codeBasePath = window.hlx?.codeBasePath || '';
   await loadCSS(`${codeBasePath}/blocks/form/form.css`);
@@ -290,7 +293,7 @@ export default async function decorate(block) {
   const stepEvent = (config['step-event-type'] || '').toString().trim();
   const abandonedEvent = (config['abandoned-event-type'] || '').toString().trim();
 
-  const formDef = buildCreditCardApplicationFormDef(config);
+  const formDef = buildCreditCardApplicationFormDef();
   const formContainer = document.createElement('div');
   formContainer.className = 'credit-card-application-form-wrapper form';
 

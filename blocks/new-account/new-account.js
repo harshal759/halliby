@@ -87,12 +87,6 @@ function buildNewAccountFormDef() {
     appliedCssClassNames: 'new-account-form new-account-wizard',
     items: [
       {
-        id: 'heading-new-account',
-        fieldType: 'heading',
-        label: { value: 'New Account' },
-        appliedCssClassNames: 'col-12 new-account-heading',
-      },
-      {
         id: 'panel-wizard',
         name: 'wizard',
         fieldType: 'panel',
@@ -268,7 +262,8 @@ function setupStepIndicator(block) {
   }
 }
 
-const NEW_ACCOUNT_WIZARD_NAME = 'New Account Application';
+let newAccountWizardTitle;
+let newAccountWizardName;
 
 function buildStepMeta(stepIndex) {
   return {
@@ -284,8 +279,8 @@ function buildWizardPayload(currentStepIndex) {
     steps[i] = buildStepMeta(i);
   }
   return {
-    name: NEW_ACCOUNT_WIZARD_NAME,
-    title: NEW_ACCOUNT_WIZARD_NAME,
+    name: newAccountWizardName,
+    title: newAccountWizardTitle,
     steps,
   };
 }
@@ -347,6 +342,17 @@ function attachNewAccountWizardDataLayerTracking(wizard, form) {
 
 export default async function decorate(block) {
   const config = readBlockConfig(block) || {};
+
+  newAccountWizardName =
+    (config.wizardname ?? config['wizard-name'] ?? config.formname ?? config['form-name'] ?? '')
+      .toString()
+      .trim() || 'new-account-application';
+
+  newAccountWizardTitle =
+    (config.wizardtitle ?? config['wizard-title'] ?? config.formtitle ?? config['form-title'] ?? '')
+      .toString()
+      .trim();
+
   [...block.children].forEach((row) => { row.style.display = 'none'; });
 
   const codeBasePath = window.hlx?.codeBasePath || '';

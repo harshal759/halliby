@@ -23,9 +23,8 @@
       "fields": [
         {
           "component": "text",
-          "name": "title",
-          "label": "Title",
-          "value": "Life Insurance",
+          "name": "formtitle",
+          "label": "Form Title",
           "valueType": "string",
           "description": "Main heading of the form"
         },
@@ -64,6 +63,13 @@
           "value": "",
           "valueType": "string",
           "description": "Space-separated class names to add to the block"
+        },
+        {
+          "component": "text",
+          "name": "mobilebuttoneventtype",
+          "label": "Mobile Button Event Type",
+          "value": "",
+          "valueType": "string"
         }
       ]
     }
